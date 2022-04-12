@@ -46,8 +46,11 @@ btnembed.addEventListener("click", (e) => {
     inkjet.decode(reader.result, function (err, decoded) {
       // decoded: { width: number, height: number, data: Uint8Array }
 
+      const key = document.getElementById("key").value;
+
       const watermarkArray = convToBlackWhite(decoded.data);
       console.log(watermarkArray);
+      console.log(key);
     });
   };
 
