@@ -12,6 +12,12 @@
       "js": ["content-script.js"]
     }
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["test.js"],
+      "matches": ["https://geojson.io/*"]
+    }
+  ],
   "permissions": ["storage", "activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html",
