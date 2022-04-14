@@ -1,3 +1,74 @@
+function syncStore(key, objectToStore) {
+  var jsonstr = JSON.stringify(objectToStore);
+  var i = 0;
+  var storageObj = {};
+
+  // split jsonstr into chunks and store them in an object indexed by `key_i`
+  while (jsonstr.length > 0) {
+    var index = key + "_" + i++;
+
+    // since the key uses up some per-item quota, see how much is left for the value
+    // also trim off 2 for quotes added by storage-time `stringify`
+    const maxLength =
+      chrome.storage.sync.QUOTA_BYTES_PER_ITEM - index.length - 2;
+    var valueLength = jsonstr.length;
+    if (valueLength > maxLength) {
+      valueLength = maxLength;
+    }
+
+    // trim down segment so it will be small enough even when run through `JSON.stringify` again at storage time
+    //max try is QUOTA_BYTES_PER_ITEM to avoid infinite loop
+    var segment = jsonstr.substr(0, valueLength);
+    for (let i = 0; i < chrome.storage.sync.QUOTA_BYTES_PER_ITEM; i++) {
+      const jsonLength = JSON.stringify(segment).length;
+      if (jsonLength > maxLength) {
+        segment = jsonstr.substr(0, --valueLength);
+      } else {
+        break;
+      }
+    }
+
+    storageObj[index] = segment;
+    jsonstr = jsonstr.substr(valueLength);
+  }
+  chrome.storage.sync.set(storageObj);
+}
+function syncGet(key, callback) {
+  chrome.storage.sync.get(key, (data) => {
+    console.log(data[key]);
+    console.log(typeof data[key]);
+    if (
+      data != undefined &&
+      data != "undefined" &&
+      data != {} &&
+      data[key] != undefined &&
+      data[key] != "undefined"
+    ) {
+      const keyArr = new Array();
+      for (let i = 0; i <= data[key].count; i++) {
+        keyArr.push(`${data[key].prefix}${i}`);
+      }
+      chrome.storage.sync.get(keyArr, (items) => {
+        console.log(data);
+        const keys = Object.keys(items);
+        const length = keys.length;
+        let results = "";
+        if (length > 0) {
+          const sepPos = keys[0].lastIndexOf("_");
+          const prefix = keys[0].substring(0, sepPos);
+          for (let x = 0; x < length; x++) {
+            results += items[`${prefix}_${x}`];
+          }
+          callback(JSON.parse(results));
+          return;
+        }
+        callback(undefined);
+      });
+    } else {
+      callback(undefined);
+    }
+  });
+}
 const pi = math.pi;
 function dec2bin(dec) {
   const buffer = new ArrayBuffer(8);
@@ -255,7 +326,6 @@ const embed_fft = (map, watermark, step, key, width, height, forbidden) => {
   const order = [];
   const mp = new Map();
   for (let i = 0; i < watermark.length; ) {
-    console.log("one");
     const g = (myrng.int32() >>> 0) % mapData.length;
     if (!mp.has(g) && !forbidden.has(g)) {
       order.push(g);
@@ -266,7 +336,6 @@ const embed_fft = (map, watermark, step, key, width, height, forbidden) => {
   order.sort((a, b) => a - b);
   let newMap = [];
   for (let i = 0; i < watermark.length; i++) {
-    console.log("two");
     newMap.push(mapData[order[i]]);
   }
 
@@ -276,28 +345,26 @@ const embed_fft = (map, watermark, step, key, width, height, forbidden) => {
   }
   let diff = cur - watermark.length;
   for (let i = 0; i < diff; i++) {
-    console.log("three");
     newMap.push(math.complex(0));
   }
-  // fft(newMap, 1);
+  fft(newMap, 1);
 
-  // //mapData = dft_normal(mapData);
-  // for (let i = 0; i < watermark.length; i++) {
-  //   const polarForm = newMap[i].toPolar();
-  //   const phi = normalize(polarForm.phi);
-  //   if (getCategory(phi, stepNormalized) !== watermark[i]) {
-  //     const newAngle = phi + stepNormalized;
-  //     const r = polarForm.r;
-  //     newMap[i] = math.complex({ r: r, phi: newAngle });
-  //   }
-  //   // if (i < 10) {
-  //   //   console.log(mapData[i]);
-  //   //   console.log(getCategory(mapData[i].toPolar().phi, stepNormalized));
-  //   // }
-  // }
-  // fft(newMap, -1);
+  //mapData = dft_normal(mapData);
   for (let i = 0; i < watermark.length; i++) {
-    console.log("four");
+    const polarForm = newMap[i].toPolar();
+    const phi = normalize(polarForm.phi);
+    if (getCategory(phi, stepNormalized) !== watermark[i]) {
+      const newAngle = phi + stepNormalized;
+      const r = polarForm.r;
+      newMap[i] = math.complex({ r: r, phi: newAngle });
+    }
+    // if (i < 10) {
+    //   console.log(mapData[i]);
+    //   console.log(getCategory(mapData[i].toPolar().phi, stepNormalized));
+    // }
+  }
+  fft(newMap, -1);
+  for (let i = 0; i < watermark.length; i++) {
     mapData[order[i]] = newMap[i];
   }
   for (let i = watermark.length; i < newMap.length; i++) {
@@ -330,25 +397,25 @@ const embed_fft = (map, watermark, step, key, width, height, forbidden) => {
 let getMap = document.getElementById("getMap");
 let getImage = document.getElementById("watermark");
 let btnembed = document.getElementById("btnembed");
-
-getMap.addEventListener("click", async () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    chrome.tabs.sendMessage(
-      tabs[0].id,
-      { greeting: "hello junho" },
-      function (response) {
-        if (response) {
-          chrome.storage.sync.set({ map: response.map });
-        }
-      }
-    );
-  });
-});
+let generatedkey = document.getElementById("generatedkey");
 
 let file;
+let map;
 
 getImage.addEventListener("change", (e) => {
   file = e.target.files[0];
+});
+
+chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+  chrome.tabs.sendMessage(
+    tabs[0].id,
+    { greeting: "hello junho" },
+    function (response) {
+      if (response) {
+        map = response.map;
+      }
+    }
+  );
 });
 
 btnembed.addEventListener("click", (e) => {
@@ -358,37 +425,30 @@ btnembed.addEventListener("click", (e) => {
 
   reader.onload = function () {
     inkjet.decode(reader.result, function (err, decoded) {
-      chrome.storage.sync.get(["map"], function (data) {
-        const mp = data.map;
-        const key = document.getElementById("key").value;
+      const mp = map;
+      const key = document.getElementById("key").value;
+      const watermarkArray = convToBlackWhite(decoded.data);
+      const [mapData, forbidden] = parseMap(mp);
+      const he = math.complex(3, 4);
+      const newKey = embed_fft(
+        mapData,
+        watermarkArray,
+        0.03,
+        key,
+        decoded.width,
+        decoded.height,
+        forbidden
+      );
+      parseComplex(mapData, mp);
+      const dataStr =
+        "data:text/json;charset=utf-8," +
+        encodeURIComponent(JSON.stringify(mp));
+      const anchorElement = document.getElementById("downloadAnchorElement");
+      anchorElement.setAttribute("href", dataStr);
+      anchorElement.setAttribute("download", "embedded.json");
+      anchorElement.click();
 
-        const watermarkArray = convToBlackWhite(decoded.data);
-        const [mapData, forbidden] = parseMap(mp);
-
-        const he = math.complex(3, 4);
-        // const newKey = embed_fft(
-        //   mapData,
-        //   watermarkArray,
-        //   0.03,
-        //   key,
-        //   decoded.width,
-        //   decoded.height,
-        //   forbidden
-        // );
-        console.log("heyyyyy");
-
-        // parseComplex(mapData, mp);
-
-        // console.log(newKey);
-
-        // const dataStr =
-        //   "data:text/json;charset=utf-8," +
-        //   encodeURIComponent(JSON.stringify(data));
-        // const anchorElement = document.getElementById("downloadAnchorElement");
-        // anchorElement.setAttribute("href", dataStr);
-        // anchorElement.setAttribute("download", "embedded.json");
-        // anchorElement.click();
-      });
+      generatedkey.innerHTML = "generated key: " + newKey;
     });
   };
 
