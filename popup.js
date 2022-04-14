@@ -441,12 +441,11 @@ btnembed.addEventListener("click", (e) => {
       );
       parseComplex(mapData, mp);
       const dataStr =
-        "data:text/json;charset=utf-8," +
-        encodeURIComponent(JSON.stringify(mp));
-      const anchorElement = document.getElementById("downloadAnchorElement");
-      anchorElement.setAttribute("href", dataStr);
-      anchorElement.setAttribute("download", "embedded.json");
-      anchorElement.click();
+        "data:application/json," + encodeURIComponent(JSON.stringify(mp));
+      chrome.tabs.create({
+        url: "http://geojson.io/#data=" + dataStr,
+        active: false,
+      });
 
       generatedkey.innerHTML = "generated key: " + newKey;
     });
