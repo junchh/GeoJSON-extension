@@ -394,10 +394,114 @@ const embed_fft = (map, watermark, step, key, width, height, forbidden) => {
   // // fft(mapData, -1);
 };
 
+const extract_fft_new = (map, step, keyString, forbidden) => {
+  const myKey = keyString.split("-");
+  const key = myKey[0];
+  const width = parseInt(myKey[1]);
+  const height = parseInt(myKey[2]);
+  const mapSize = parseInt(myKey[3]);
+  const result = [];
+  const stepNormalized = (step / 360.0) * 2 * math.pi;
+  const myrng = new Math.seedrandom(key);
+  const order = [];
+  const mp = new Map();
+  let cur = 1;
+  while (width * height > cur) {
+    cur *= 2;
+  }
+  let diff = cur - width * height;
+  if (diff + mapSize === map.length) {
+    for (let i = 0; i < width * height; ) {
+      const g = (myrng.int32() >>> 0) % (map.length - diff);
+      if (!mp.has(g) && !forbidden.has(g)) {
+        order.push(g);
+        i++;
+        mp.set(g, 1);
+      }
+    }
+    order.sort((a, b) => a - b);
+    let mapData = map;
+    let newMap = [];
+    for (let i = 0; i < width * height; i++) {
+      newMap.push(mapData[order[i]]);
+    }
+    for (let i = 0; i < diff; i++) {
+      newMap.push(mapData[mapData.length - diff + i]);
+    }
+    //mapData = dft_normal(mapData);
+    fft(newMap, 1);
+
+    for (let i = 0; i < width * height; i++) {
+      const polarForm = newMap[i].toPolar();
+      const phi = normalize(polarForm.phi);
+      result.push(getCategory(phi, stepNormalized));
+    }
+    return result;
+  } else {
+    let mapData = map;
+    let newMap = [];
+    for (let i = 0; i < mapData.length; i++) {
+      const arr = dec2bin(mapData[i].re);
+      if (arr[63] === 1) {
+        newMap.push(mapData[i]);
+      }
+    }
+    console.log(newMap.length);
+    fft(newMap, 1);
+
+    for (let i = 0; i < width * height; i++) {
+      const polarForm = newMap[i].toPolar();
+      const phi = normalize(polarForm.phi);
+      result.push(getCategory(phi, stepNormalized));
+    }
+    return result;
+  }
+};
+
+const saveToImage = (filename, arr, width, height) => {
+  const frameData = new Array(width * height * 4);
+  let i = 0;
+  let k = 0;
+
+  while (i < frameData.length) {
+    if (arr[k] === 1) {
+      frameData[i++] = 0;
+      frameData[i++] = 0;
+      frameData[i++] = 0;
+      frameData[i++] = 0xff;
+    } else {
+      frameData[i++] = 255;
+      frameData[i++] = 255;
+      frameData[i++] = 255;
+      frameData[i++] = 0xff;
+    }
+    k++;
+  }
+
+  const buf = frameData;
+  const options = {
+    width: width,
+    height: height,
+    quality: 80,
+  };
+
+  inkjet.encode(buf, options, (err, encoded) => {
+    const imageURL = URL.createObjectURL(new Blob([encoded.data]));
+
+    const link = document.createElement("a");
+    link.href = imageURL;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+};
+
 let getMap = document.getElementById("getMap");
 let getImage = document.getElementById("watermark");
 let btnembed = document.getElementById("btnembed");
 let generatedkey = document.getElementById("generatedkey");
+let btnextract = document.getElementById("btnextract");
 
 let file;
 let map;
@@ -454,4 +558,16 @@ btnembed.addEventListener("click", (e) => {
   reader.onerror = function () {
     console.log(reader.error);
   };
+});
+
+btnextract.addEventListener("click", (e) => {
+  const key = document.getElementById("key2").value;
+  const mp = map;
+  const [mapData, forbidden] = parseMap(mp);
+
+  const watermarkData = extract_fft_new(mapData, 0.03, key, forbidden);
+
+  const myArr = key.split("-");
+
+  saveToImage("extracted.jpg", watermarkData, myArr[1], myArr[2]);
 });
