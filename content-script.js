@@ -6,8 +6,7 @@ function injectScript(file_path, tag) {
   node.appendChild(script);
 }
 injectScript(chrome.runtime.getURL("test.js"), "body");
-
-let mapData;
+let mapData = null;
 const handleFromWeb = async (event) => {
   if (event.data.from) {
     const data = event.data.data;
@@ -23,8 +22,13 @@ const handleFromWeb = async (event) => {
           ? "from a content script:" + sender.tab.url
           : "from the extension"
       );
-      sendResponse({ map: data });
+      mapData = data;
     });
   }
 };
 window.addEventListener("message", handleFromWeb);
+
+chrome.runtime.onMessage.addListener((msg, sender, response) => {
+  console.log("dari popup");
+  response(mapData);
+});
