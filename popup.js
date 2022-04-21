@@ -439,21 +439,48 @@ getImage.addEventListener("change", (e) => {
   file = e.target.files[0];
 });
 
-getMap.addEventListener("click", () => {
+getMap.addEventListener("click", async () => {
   console.log("the click");
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    chrome.tabs.sendMessage(
-      tabs[0].id,
-      { greeting: "hello junho" },
-      function (response) {
-        if (response) {
-          console.log("dari content script");
-          console.log(response);
-          map = response;
-        }
+
+  let [tabs] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  chrome.tabs.sendMessage(tabs.id, {}, function (a) {});
+  chrome.tabs.sendMessage(
+    tabs.id,
+    { greeting: "hello junho" },
+    function (response) {
+      if (response) {
+        console.log("dari content script");
+        console.log(response);
+        map = response;
       }
-    );
-  });
+    }
+  );
+  // );
+  // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+  //   chrome.tabs.sendMessage(
+  //     tabs[0].id,
+  //     { greeting: "hello junho" },
+  //     function (response) {
+  //       if (response) {
+  //         console.log("dari content script");
+  //         console.log(response);
+  //         map = response;
+  //       }
+  //     }
+  //   );
+  //   chrome.tabs.sendMessage(
+  //     tabs[0].id,
+  //     { greeting: "hello junho" },
+  //     function (response) {
+  //       if (response) {
+  //         console.log("dari content script");
+  //         console.log(response);
+  //         map = response;
+  //       }
+  //     }
+  //   );
+  // });
 });
 
 btnembed.addEventListener("click", (e) => {
