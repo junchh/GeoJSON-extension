@@ -9,28 +9,36 @@
       <div>
         <button id="getMap">Load Map</button>
       </div>
-      <div class="imageSection">
-        <form>
-          <h2>Upload Watermark</h2>
-          <input type="file" id="watermark" name="filename" />
-          <h2>Key</h2>
-          <input type="text" id="key" />
-        </form>
+      <div class="tab">
+        <button id="btntabembed" class="tabbtn active">Embed</button>
+        <button id="btntabextract" class="tabbtn">Extract</button>
       </div>
-      <div class="embedSection">
-        <button id="btnembed">Embed</button>
+      <div id="embed">
+        <div class="imageSection">
+          <form>
+            <h2>Upload Watermark</h2>
+            <input type="file" id="watermark" name="filename" />
+            <h2>Key</h2>
+            <input type="text" id="key" />
+          </form>
+        </div>
+        <div class="embedSection">
+          <button id="btnembed">Embed</button>
+        </div>
+        <div class="generatedKeySection">
+          <p id="generatedkey"></p>
+        </div>
       </div>
-      <div class="generatedKeySection">
-        <p id="generatedkey"></p>
-      </div>
-      <div class="imageSection">
-        <form>
-          <h2>Key</h2>
-          <input type="text" id="key2" />
-        </form>
-      </div>
-      <div class="embedSection">
-        <button id="btnextract">Extract</button>
+      <div id="extract">
+        <div class="imageSection">
+          <form>
+            <h2>Key</h2>
+            <input type="text" id="key2" />
+          </form>
+        </div>
+        <div class="embedSection">
+          <button id="btnextract">Extract</button>
+        </div>
       </div>
     </div>
     <a id="downloadAnchorElement" style="display: none"></a>

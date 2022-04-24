@@ -535,3 +535,30 @@ btnextract.addEventListener("click", (e) => {
 
   saveToImage("extracted.jpg", watermarkData, myArr[1], myArr[2]);
 });
+
+let current = 0;
+let embedTab = document.getElementById("embed");
+let extractTab = document.getElementById("extract");
+let btntabembed = document.getElementById("btntabembed");
+let btntabextract = document.getElementById("btntabextract");
+extractTab.style.display = "none";
+
+btntabembed.addEventListener("click", (e) => {
+  if (current === 1) {
+    embedTab.style.display = "block";
+    extractTab.style.display = "none";
+    btntabembed.classList.add("active");
+    btntabextract.classList.remove("active");
+    current = 0;
+  }
+});
+
+btntabextract.addEventListener("click", (e) => {
+  if (current === 0) {
+    embedTab.style.display = "none";
+    extractTab.style.display = "block";
+    btntabextract.classList.add("active");
+    btntabembed.classList.remove("active");
+    current = 1;
+  }
+});
